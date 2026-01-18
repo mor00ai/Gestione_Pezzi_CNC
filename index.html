@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CNC Manager Pro</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2092/2092141.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; padding: 1rem; }
+        .card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .btn-primary { background-color: #4f46e5; color: white; padding: 0.7rem; border-radius: 8px; font-weight: 600; width: 100%; transition: 0.2s; }
+        .btn-primary:hover { background-color: #4338ca; }
+        .btn-action { background-color: #1e293b; color: white; padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: 600; transition: 0.2s; }
+        input, select { border: 1px solid #e2e8f0; padding: 0.6rem; border-radius: 8px; width: 100%; margin-bottom: 0.5rem; outline-color: #4f46e5; background: white; }
+        .label-style { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: #64748b; margin-bottom: 0.2rem; display: block; }
+        .item-row { border-bottom: 1px solid #f1f5f9; padding: 1rem 0; }
+        .hidden { display: none !important; }
+        .btn-danger-outline { border: 1px solid #fca5a5; color: #ef4444; padding: 0.5rem; border-radius: 8px; font-size: 0.7rem; font-weight: bold; transition: 0.2s; }
+    </style>
+</head>
+<body>
+
+    <div id="auth-section" class="max-w-md mx-auto mt-16 card">
+        <h2 class="text-2xl font-bold text-center mb-6 text-indigo-900">Database Officina</h2>
+        <input type="email" id="email" placeholder="Email aziendale">
+        <input type="password" id="password" placeholder="Password">
+        <button id="login-btn" class="btn-primary mb-3">Accedi</button>
+        <button id="reg-btn" class="w-full text-sm text-gray-400">Registrati</button>
+    </div>
+
+    <div id="app-section" class="max-w-5xl mx-auto space-y-6 hidden">
+        <div class="flex flex-wrap justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-100 gap-3">
+            <h1 class="text-xl font-extrabold text-indigo-900 tracking-tighter">CNC MANAGER PRO</h1>
+            <div class="flex items-center gap-3">
+                <span id="user-display" class="text-[9px] md:text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1.5 rounded-lg border border-indigo-100 uppercase truncate max-w-[150px] md:max-w-none"></span>
+                <button id="logout-btn" class="text-red-500 text-[10px] font-bold border border-red-100 px-3 py-1.5 rounded-lg hover:bg-red-50 transition">LOGOUT</button>
+            </div>
+        </div>
+
+        <div class="card grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="space-y-1">
+                <label class="label-style">Anagrafica Pezzo</label>
+                <input type="text" id="part-code" placeholder="CODICE DISEGNO" class="uppercase font-bold">
+                <input type="text" id="part-name" placeholder="DESCRIZIONE">
+                <input type="text" id="order-no" placeholder="NUMERO COMMESSA">
+            </div>
+            <div class="space-y-1">
+                <label class="label-style">Tempi e Costi</label>
+                <input type="number" id="setup-t" placeholder="Piazzamento (min)">
+                <input type="number" id="prod-t" placeholder="Produzione (min)">
+                <div class="relative">
+                    <span class="absolute right-3 top-2.5 text-gray-400 text-sm">€/h</span>
+                    <input type="number" id="hourly-rate" placeholder="Costo Macchina" value="60">
+                </div>
+            </div>
+            <div class="flex flex-col justify-end space-y-3">
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="p-3 bg-slate-50 rounded-lg text-center">
+                        <p class="text-[10px] text-gray-400 uppercase font-bold">Tempo</p>
+                        <p class="font-bold text-slate-700"><span id="total-val">0</span> m</p>
+                    </div>
+                    <div class="p-3 bg-emerald-50 rounded-lg text-center border border-emerald-100">
+                        <p class="text-[10px] text-emerald-600 uppercase font-bold">Costo</p>
+                        <p class="font-bold text-emerald-700">€ <span id="cost-val">0.00</span></p>
+                    </div>
+                </div>
+                <input type="hidden" id="edit-id">
+                <button id="save-btn" class="btn-primary">SALVA DATI</button>
+                <button id="cancel-btn" class="text-xs text-gray-400 underline text-center">Pulisci campi</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-8 items-end">
+                <div class="md:col-span-7">
+                    <label class="label-style">Cerca nel Database</label>
+                    <input type="text" id="search" placeholder="Cerca codice o nome..." class="mb-0">
+                </div>
+                <div class="md:col-span-3">
+                    <label class="label-style">Formato Export</label>
+                    <select id="export-format" class="mb-0">
+                        <option value="csv">Excel (CSV)</option>
+                        <option value="txt">Testo (TXT)</option>
+                        <option value="html">Report (HTML)</option>
+                    </select>
+                </div>
+                <div class="md:col-span-2">
+                    <button id="run-export" class="btn-action w-full uppercase text-xs">Esporta</button>
+                </div>
+            </div>
+            <div id="list" class="divide-y divide-gray-100"></div>
+        </div>
+
+        <div class="p-6 border-2 border-dashed border-red-100 rounded-xl bg-red-50/30">
+            <h3 class="text-sm font-bold text-red-800 uppercase mb-4 text-center tracking-widest">Gestione Sicurezza</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button id="clear-local" class="btn-danger-outline uppercase bg-white">Elimina Cache Locale</button>
+                <button id="clear-cloud" class="btn-danger-outline uppercase bg-red-50">Svuota Cloud Online</button>
+            </div>
+        </div>
+
+        <footer class="mt-12 pb-6 text-center border-t border-slate-200 pt-6">
+            <p class="text-[10px] font-semibold text-slate-400 tracking-widest uppercase italic">
+                copyright moralex00 v.1
+            </p>
+        </footer>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, setDoc, doc, deleteDoc, onSnapshot, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCcof11vZD3gsvbUCMy6KJvOl4Vdo-t5Oo",
+            authDomain: "gestione-pezzi.firebaseapp.com",
+            projectId: "gestione-pezzi",
+            storageBucket: "gestione-pezzi.firebasestorage.app",
+            messagingSenderId: "562438607184",
+            appId: "1:562438607184:web:ee3d30711e2b0432ec5c55"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        let uid, dataList = [], unsubscribe = () => {};
+
+        // REGISTRAZIONE PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js').catch(err => console.log(err));
+            });
+        }
+
+        // GESTIONE ACCESSO E VISUALIZZAZIONE EMAIL
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                uid = user.uid;
+                // Popolamento email in alto a destra
+                document.getElementById('user-display').innerText = user.email;
+                document.getElementById('auth-section').classList.add('hidden');
+                document.getElementById('app-section').classList.remove('hidden');
+                loadData();
+            } else {
+                document.getElementById('auth-section').classList.remove('hidden');
+                document.getElementById('app-section').classList.add('hidden');
+            }
+        });
+
+        document.getElementById('login-btn').onclick = () => signInWithEmailAndPassword(auth, email.value, password.value).catch(() => alert("Credenziali errate"));
+        document.getElementById('reg-btn').onclick = () => createUserWithEmailAndPassword(auth, email.value, password.value).catch(() => alert("Errore registrazione"));
+        document.getElementById('logout-btn').onclick = () => signOut(auth);
+
+        function loadData() {
+            unsubscribe();
+            unsubscribe = onSnapshot(collection(db, `users/${uid}/cnc_parts`), snap => {
+                dataList = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                dataList.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+                render();
+            });
+        }
+
+        const updateCalculations = () => {
+            const setup = parseFloat(document.getElementById('setup-t').value) || 0;
+            const prod = parseFloat(document.getElementById('prod-t').value) || 0;
+            const rate = parseFloat(document.getElementById('hourly-rate').value) || 0;
+            const totalMin = setup + prod;
+            const totalCost = (totalMin / 60) * rate;
+            document.getElementById('total-val').innerText = totalMin.toFixed(1);
+            document.getElementById('cost-val').innerText = totalCost.toFixed(2);
+            return { totalMin, totalCost, rate };
+        };
+
+        ['setup-t', 'prod-t', 'hourly-rate'].forEach(id => document.getElementById(id).oninput = updateCalculations);
+
+        document.getElementById('save-btn').onclick = async () => {
+            const { totalMin, totalCost, rate } = updateCalculations();
+            const part = {
+                code: document.getElementById('part-code').value.toUpperCase().trim(),
+                name: document.getElementById('part-name').value.trim(),
+                order: document.getElementById('order-no').value.trim(),
+                setup: parseFloat(document.getElementById('setup-t').value) || 0,
+                prod: parseFloat(document.getElementById('prod-t').value) || 0,
+                rate: rate,
+                total: totalMin,
+                cost: totalCost,
+                timestamp: new Date().toISOString()
+            };
+            if(!part.code) return alert("Codice obbligatorio");
+            const id = document.getElementById('edit-id').value;
+            id ? await setDoc(doc(db, `users/${uid}/cnc_parts`, id), part) : await addDoc(collection(db, `users/${uid}/cnc_parts`), part);
+            clearForm();
+        };
+
+        function render() {
+            const list = document.getElementById('list');
+            const search = document.getElementById('search').value.toLowerCase();
+            list.innerHTML = "";
+            const filtered = dataList.filter(i => i.code.toLowerCase().includes(search) || i.name.toLowerCase().includes(search));
+
+            filtered.forEach(i => {
+                const dateStr = new Date(i.timestamp).toLocaleString([], {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+                const div = document.createElement('div');
+                div.className = "item-row flex justify-between items-center";
+                div.innerHTML = `
+                    <div>
+                        <p class="font-bold text-indigo-900 uppercase leading-none mb-1 text-sm">${i.code}</p>
+                        <p class="text-[9px] text-gray-400 font-bold uppercase">${dateStr} | ${i.name}</p>
+                    </div>
+                    <div class="text-right flex items-center gap-3">
+                        <div class="text-sm font-black text-indigo-600">€${i.cost.toFixed(2)}</div>
+                        <div class="flex">
+                            <button onclick="editItem('${i.id}')" class="text-indigo-400 text-[10px] font-bold p-2">MOD</button>
+                            <button onclick="delItem('${i.id}')" class="text-red-300 text-[10px] font-bold p-2">X</button>
+                        </div>
+                    </div>`;
+                list.appendChild(div);
+            });
+        }
+
+        window.editItem = id => {
+            const i = dataList.find(x => x.id === id);
+            document.getElementById('part-code').value = i.code;
+            document.getElementById('part-name').value = i.name;
+            document.getElementById('order-no').value = i.order || '';
+            document.getElementById('setup-t').value = i.setup;
+            document.getElementById('prod-t').value = i.prod;
+            document.getElementById('hourly-rate').value = i.rate;
+            document.getElementById('edit-id').value = i.id;
+            updateCalculations();
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        };
+
+        window.delItem = id => confirm("Eliminare?") && deleteDoc(doc(db, `users/${uid}/cnc_parts`, id));
+        document.getElementById('cancel-btn').onclick = clearForm;
+        
+        function clearForm() { 
+            document.querySelectorAll('input:not([type=email]):not([type=password]):not(#hourly-rate)').forEach(i => i.value = ""); 
+            document.getElementById('edit-id').value = "";
+            updateCalculations(); 
+        }
+
+        document.getElementById('search').oninput = render;
+
+        // CANCELLAZIONE
+        document.getElementById('clear-local').onclick = () => confirm("Pulire cache browser?") && (localStorage.clear() || location.reload());
+        document.getElementById('clear-cloud').onclick = async () => {
+            if(confirm("ELIMINARE TUTTO ONLINE?")) {
+                const batch = writeBatch(db);
+                const snap = await getDocs(collection(db, `users/${uid}/cnc_parts`));
+                snap.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+                alert("Cloud Svuotato");
+            }
+        };
+
+        // EXPORT
+        document.getElementById('run-export').onclick = () => {
+            const format = document.getElementById('export-format').value;
+            const now = new Date().toLocaleString().replace(/[\/: ]/g, "-");
+            if (format === 'csv') {
+                let csv = "DATA;CODICE;COSTO\n";
+                dataList.forEach(i => csv += `${new Date(i.timestamp).toLocaleString()};${i.code};${i.cost.toFixed(2)}\n`);
+                download(csv, `Export_${now}.csv`, "text/csv");
+            } else if (format === 'txt') {
+                let txt = "BACKUP CNC\n";
+                dataList.forEach(i => txt += `[${new Date(i.timestamp).toLocaleString()}] ${i.code} - €${i.cost.toFixed(2)}\n`);
+                download(txt, `Backup_${now}.txt`, "text/plain");
+            } else {
+                let html = `<html><body style="font-family:sans-serif;padding:10px"><h2>Report</h2><table border="1" style="width:100%;border-collapse:collapse">`;
+                dataList.forEach(i => html += `<tr><td>${new Date(i.timestamp).toLocaleString()}</td><td>${i.code}</td><td>€${i.cost.toFixed(2)}</td></tr>`);
+                html += `</table></body></html>`;
+                download(html, `Report_${now}.html`, "text/html");
+            }
+        };
+
+        function download(content, name, type) {
+            const blob = new Blob([content], {type});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob); a.download = name; a.click();
+        }
+    </script>
+</body>
+</html>
