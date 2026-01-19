@@ -9,20 +9,42 @@
     <meta name="theme-color" content="#4f46e5">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2092/2092141.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; padding: 1rem; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; padding: 1rem; user-select: none; }
         .card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
         .btn-primary { background-color: #4f46e5; color: white; padding: 0.7rem; border-radius: 8px; font-weight: 600; width: 100%; transition: 0.2s; }
-        .btn-primary:hover { background-color: #4338ca; }
+        .btn-primary:active { transform: scale(0.98); }
         .btn-action { background-color: #1e293b; color: white; padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: 600; transition: 0.2s; }
         input, select { border: 1px solid #e2e8f0; padding: 0.6rem; border-radius: 8px; width: 100%; margin-bottom: 0.5rem; outline-color: #4f46e5; background: white; }
         .label-style { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: #64748b; margin-bottom: 0.2rem; display: block; }
         .item-row { border-bottom: 1px solid #f1f5f9; padding: 1rem 0; }
         .hidden { display: none !important; }
-        .btn-danger-outline { border: 1px solid #fca5a5; color: #ef4444; padding: 0.5rem; border-radius: 8px; font-size: 0.7rem; font-weight: bold; transition: 0.2s; }
+        
+        /* Stili Pulsanti Pericolosi */
+        .btn-danger-outline { border: 1px solid #fca5a5; color: #ef4444; padding: 0.5rem; border-radius: 8px; font-size: 0.7rem; font-weight: bold; transition: 0.2s; background: white; }
+        .btn-danger-outline:hover { background-color: #fef2f2; }
+        .btn-danger-full { background-color: #ef4444; color: white; padding: 0.5rem; border-radius: 8px; font-size: 0.7rem; font-weight: bold; border: 1px solid #dc2626; box-shadow: 0 2px 4px rgba(239,68,68,0.3); }
+        
+        /* Status Pill */
+        #status-pill { transition: 0.3s; }
+        .status-online { background: #ecfdf5; color: #059669; border: 1px solid #10b981; }
+        .status-offline { background: #fef2f2; color: #dc2626; border: 1px solid #ef4444; }
+        
+        #search-summary-box { background: #eef2ff; border: 1px dashed #4f46e5; border-radius: 8px; padding: 0.75rem; margin-top: 0.5rem; display: none; }
+        
+        /* Badge Commessa */
+        .order-badge { 
+            background-color: #e0e7ff; color: #4338ca; padding: 2px 6px; 
+            border-radius: 4px; font-size: 10px; font-weight: 800; 
+            border: 1px solid #c7d2fe; margin-right: 8px; 
+            display: inline-block; vertical-align: middle;
+        }
     </style>
 </head>
 <body>
@@ -36,11 +58,15 @@
     </div>
 
     <div id="app-section" class="max-w-5xl mx-auto space-y-6 hidden">
+        
         <div class="flex flex-wrap justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-100 gap-3">
-            <h1 class="text-xl font-extrabold text-indigo-900 tracking-tighter">CNC MANAGER PRO</h1>
             <div class="flex items-center gap-3">
-                <span id="user-display" class="text-[9px] md:text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1.5 rounded-lg border border-indigo-100 uppercase truncate max-w-[150px] md:max-w-none"></span>
-                <button id="logout-btn" class="text-red-500 text-[10px] font-bold border border-red-100 px-3 py-1.5 rounded-lg hover:bg-red-50 transition">LOGOUT</button>
+                <h1 class="text-xl font-extrabold text-indigo-900 tracking-tighter">CNC MANAGER PRO</h1>
+                <div id="status-pill" class="status-online px-2 py-1 rounded text-[9px] font-bold uppercase">Online</div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span id="user-display" class="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1.5 rounded-lg border border-indigo-100 uppercase truncate max-w-[150px]"></span>
+                <button id="logout-btn" class="text-red-500 text-[10px] font-bold border border-red-100 px-3 py-1.5 rounded-lg hover:bg-red-50">LOGOUT</button>
             </div>
         </div>
 
@@ -49,7 +75,7 @@
                 <label class="label-style">Anagrafica Pezzo</label>
                 <input type="text" id="part-code" placeholder="CODICE DISEGNO" class="uppercase font-bold">
                 <input type="text" id="part-name" placeholder="DESCRIZIONE">
-                <input type="text" id="order-no" placeholder="NUMERO COMMESSA">
+                <input type="text" id="order-no" placeholder="NUMERO COMMESSA" class="uppercase font-bold text-indigo-700">
             </div>
             <div class="space-y-1">
                 <label class="label-style">Tempi e Costi</label>
@@ -57,66 +83,70 @@
                 <input type="number" id="prod-t" placeholder="Produzione (min)">
                 <div class="relative">
                     <span class="absolute right-3 top-2.5 text-gray-400 text-sm">€/h</span>
-                    <input type="number" id="hourly-rate" placeholder="Costo Macchina" value="60">
+                    <input type="number" id="hourly-rate" value="60">
                 </div>
             </div>
             <div class="flex flex-col justify-end space-y-3">
                 <div class="grid grid-cols-2 gap-2">
-                    <div class="p-3 bg-slate-50 rounded-lg text-center">
-                        <p class="text-[10px] text-gray-400 uppercase font-bold">Tempo</p>
-                        <p class="font-bold text-slate-700"><span id="total-val">0</span> m</p>
-                    </div>
-                    <div class="p-3 bg-emerald-50 rounded-lg text-center border border-emerald-100">
-                        <p class="text-[10px] text-emerald-600 uppercase font-bold">Costo</p>
-                        <p class="font-bold text-emerald-700">€ <span id="cost-val">0.00</span></p>
-                    </div>
+                    <div class="p-3 bg-slate-50 rounded-lg text-center"><p class="text-[10px] text-gray-400 uppercase font-bold">Tempo</p><p class="font-bold text-slate-700"><span id="total-val">0</span> m</p></div>
+                    <div class="p-3 bg-emerald-50 rounded-lg text-center border border-emerald-100"><p class="text-[10px] text-emerald-600 uppercase font-bold">Costo</p><p class="font-bold text-emerald-700">€ <span id="cost-val">0.00</span></p></div>
                 </div>
                 <input type="hidden" id="edit-id">
                 <button id="save-btn" class="btn-primary">SALVA DATI</button>
-                <button id="cancel-btn" class="text-xs text-gray-400 underline text-center">Pulisci campi</button>
+                <button id="cancel-btn" class="text-xs text-gray-400 underline text-center cursor-pointer">Pulisci campi</button>
             </div>
         </div>
 
         <div class="card">
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-8 items-end">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4 items-end">
                 <div class="md:col-span-7">
-                    <label class="label-style">Cerca nel Database</label>
-                    <input type="text" id="search" placeholder="Cerca codice o nome..." class="mb-0">
+                    <label class="label-style">Cerca per Commessa, Disegno o Nome</label>
+                    <input type="text" id="search" placeholder="Cerca..." class="mb-0">
                 </div>
                 <div class="md:col-span-3">
                     <label class="label-style">Formato Export</label>
                     <select id="export-format" class="mb-0">
-                        <option value="csv">Excel (CSV)</option>
+                        <option value="pdf">Documento PDF</option>
+                        <option value="csv">Foglio Excel (CSV)</option>
                         <option value="txt">Testo (TXT)</option>
-                        <option value="html">Report (HTML)</option>
+                        <option value="html">Tabella Web (HTML)</option>
                     </select>
                 </div>
                 <div class="md:col-span-2">
-                    <button id="run-export" class="btn-action w-full uppercase text-xs">Esporta</button>
+                    <button id="run-export" class="btn-action w-full uppercase text-xs">Esporta Lista</button>
                 </div>
             </div>
-            <div id="list" class="divide-y divide-gray-100"></div>
-        </div>
 
-        <div class="p-6 border-2 border-dashed border-red-100 rounded-xl bg-red-50/30">
-            <h3 class="text-sm font-bold text-red-800 uppercase mb-4 text-center tracking-widest">Gestione Sicurezza</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button id="clear-local" class="btn-danger-outline uppercase bg-white">Elimina Cache Locale</button>
-                <button id="clear-cloud" class="btn-danger-outline uppercase bg-red-50">Svuota Cloud Online</button>
+            <div id="search-summary-box" class="flex flex-wrap justify-between items-center gap-4">
+                <button id="pdf-report-shortcut" class="bg-indigo-600 text-white text-[10px] font-bold px-3 py-2 rounded shadow hover:bg-indigo-700 uppercase">PDF Rapido</button>
+                <div class="flex gap-4">
+                    <div class="text-right"><p class="text-[8px] text-gray-500 uppercase">Tempo Tot.</p><p class="font-black text-indigo-900 text-sm" id="sum-time">0 m</p></div>
+                    <div class="text-right"><p class="text-[8px] text-gray-500 uppercase">Costo Tot.</p><p class="font-black text-emerald-600 text-sm" id="sum-cost">€ 0.00</p></div>
+                </div>
             </div>
+
+            <div id="list" class="divide-y divide-gray-100 mt-4"></div>
         </div>
 
-        <footer class="mt-12 pb-6 text-center border-t border-slate-200 pt-6">
-            <p class="text-[10px] font-semibold text-slate-400 tracking-widest uppercase italic">
-                copyright moralex00 v.1
-            </p>
+        <div class="card bg-red-50/20 border border-red-100">
+            <h3 class="text-xs font-black text-red-800 uppercase mb-4 tracking-widest text-center">Gestione Archivi</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button id="btn-del-local" class="btn-danger-outline uppercase">Elimina Dati Locale</button>
+                <button id="btn-del-cloud" class="btn-danger-outline uppercase">Elimina Dati Cloud</button>
+                <button id="btn-del-total" class="btn-danger-full uppercase shadow-lg">Elimina Tutto (Totale)</button>
+            </div>
+            <p class="text-[9px] text-gray-400 text-center mt-3 uppercase font-medium">Attenzione: le operazioni cloud sono irreversibili.</p>
+        </div>
+
+        <footer class="mt-8 pb-6 text-center border-t border-slate-200 pt-6">
+            <p class="text-[10px] font-semibold text-slate-400 tracking-widest uppercase italic">copyright moralex00 v.1</p>
         </footer>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, setDoc, doc, deleteDoc, onSnapshot, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, setDoc, doc, deleteDoc, onSnapshot, getDocs, writeBatch, clearIndexedDbPersistence, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCcof11vZD3gsvbUCMy6KJvOl4Vdo-t5Oo",
@@ -130,21 +160,20 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        let uid, dataList = [], unsubscribe = () => {};
 
-        // REGISTRAZIONE PWA
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./service-worker.js').catch(err => console.log(err));
-            });
+        // ABILITA OFFLINE PERSISTENCE PER FIRESTORE
+        try {
+            await enableIndexedDbPersistence(db);
+            console.log("Persistenza offline attivata");
+        } catch (err) {
+            console.log("Persistenza non attivata (multi-tab aperto?)", err.code);
         }
 
-        // GESTIONE ACCESSO E VISUALIZZAZIONE EMAIL
+        let uid, dataList = [], filteredList = [], unsubscribe = () => {};
+
         onAuthStateChanged(auth, user => {
             if (user) {
-                uid = user.uid;
-                // Popolamento email in alto a destra
-                document.getElementById('user-display').innerText = user.email;
+                uid = user.uid; document.getElementById('user-display').innerText = user.email;
                 document.getElementById('auth-section').classList.add('hidden');
                 document.getElementById('app-section').classList.remove('hidden');
                 loadData();
@@ -154,14 +183,15 @@
             }
         });
 
-        document.getElementById('login-btn').onclick = () => signInWithEmailAndPassword(auth, email.value, password.value).catch(() => alert("Credenziali errate"));
-        document.getElementById('reg-btn').onclick = () => createUserWithEmailAndPassword(auth, email.value, password.value).catch(() => alert("Errore registrazione"));
+        document.getElementById('login-btn').onclick = () => signInWithEmailAndPassword(auth, email.value, password.value);
+        document.getElementById('reg-btn').onclick = () => createUserWithEmailAndPassword(auth, email.value, password.value);
         document.getElementById('logout-btn').onclick = () => signOut(auth);
 
         function loadData() {
             unsubscribe();
             unsubscribe = onSnapshot(collection(db, `users/${uid}/cnc_parts`), snap => {
                 dataList = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                // Ordinamento per data (più recente in alto)
                 dataList.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
                 render();
             });
@@ -171,29 +201,27 @@
             const setup = parseFloat(document.getElementById('setup-t').value) || 0;
             const prod = parseFloat(document.getElementById('prod-t').value) || 0;
             const rate = parseFloat(document.getElementById('hourly-rate').value) || 0;
-            const totalMin = setup + prod;
-            const totalCost = (totalMin / 60) * rate;
-            document.getElementById('total-val').innerText = totalMin.toFixed(1);
-            document.getElementById('cost-val').innerText = totalCost.toFixed(2);
-            return { totalMin, totalCost, rate };
+            const total = setup + prod;
+            const cost = (total / 60) * rate;
+            document.getElementById('total-val').innerText = total.toFixed(1);
+            document.getElementById('cost-val').innerText = cost.toFixed(2);
+            return { total, cost, rate };
         };
 
         ['setup-t', 'prod-t', 'hourly-rate'].forEach(id => document.getElementById(id).oninput = updateCalculations);
 
         document.getElementById('save-btn').onclick = async () => {
-            const { totalMin, totalCost, rate } = updateCalculations();
+            const { total, cost, rate } = updateCalculations();
             const part = {
                 code: document.getElementById('part-code').value.toUpperCase().trim(),
                 name: document.getElementById('part-name').value.trim(),
-                order: document.getElementById('order-no').value.trim(),
+                order: document.getElementById('order-no').value.toUpperCase().trim(),
                 setup: parseFloat(document.getElementById('setup-t').value) || 0,
                 prod: parseFloat(document.getElementById('prod-t').value) || 0,
-                rate: rate,
-                total: totalMin,
-                cost: totalCost,
+                rate: rate, total: total, cost: cost,
                 timestamp: new Date().toISOString()
             };
-            if(!part.code) return alert("Codice obbligatorio");
+            if(!part.code) return alert("Codice mancante");
             const id = document.getElementById('edit-id').value;
             id ? await setDoc(doc(db, `users/${uid}/cnc_parts`, id), part) : await addDoc(collection(db, `users/${uid}/cnc_parts`), part);
             clearForm();
@@ -202,89 +230,152 @@
         function render() {
             const list = document.getElementById('list');
             const search = document.getElementById('search').value.toLowerCase();
+            const summaryBox = document.getElementById('search-summary-box');
             list.innerHTML = "";
-            const filtered = dataList.filter(i => i.code.toLowerCase().includes(search) || i.name.toLowerCase().includes(search));
+            
+            filteredList = dataList.filter(i => 
+                i.code.toLowerCase().includes(search) || 
+                i.name.toLowerCase().includes(search) ||
+                (i.order && i.order.toLowerCase().includes(search))
+            );
 
-            filtered.forEach(i => {
-                const dateStr = new Date(i.timestamp).toLocaleString([], {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+            const totalT = filteredList.reduce((acc, curr) => acc + curr.total, 0);
+            const totalC = filteredList.reduce((acc, curr) => acc + curr.cost, 0);
+
+            summaryBox.style.display = search.length > 0 ? 'flex' : 'none';
+            document.getElementById('sum-time').innerText = totalT.toFixed(1) + " m";
+            document.getElementById('sum-cost').innerText = "€ " + totalC.toFixed(2);
+
+            filteredList.forEach(i => {
+                const dateStr = new Date(i.timestamp).toLocaleDateString();
                 const div = document.createElement('div');
                 div.className = "item-row flex justify-between items-center";
+                
+                const orderHtml = i.order ? `<span class="order-badge">${i.order}</span>` : `<span class="order-badge" style="background:#f1f5f9;color:#94a3b8;border-color:#e2e8f0">NO CMD</span>`;
+
                 div.innerHTML = `
-                    <div>
-                        <p class="font-bold text-indigo-900 uppercase leading-none mb-1 text-sm">${i.code}</p>
-                        <p class="text-[9px] text-gray-400 font-bold uppercase">${dateStr} | ${i.name}</p>
+                    <div class="flex-1">
+                        <div class="flex items-center mb-1">${orderHtml}<p class="font-black text-indigo-900 uppercase text-sm tracking-tight">${i.code}</p></div>
+                        <p class="text-[10px] text-gray-400 font-medium uppercase ml-1">Data: ${dateStr} | ${i.name}</p>
                     </div>
-                    <div class="text-right flex items-center gap-3">
-                        <div class="text-sm font-black text-indigo-600">€${i.cost.toFixed(2)}</div>
-                        <div class="flex">
-                            <button onclick="editItem('${i.id}')" class="text-indigo-400 text-[10px] font-bold p-2">MOD</button>
-                            <button onclick="delItem('${i.id}')" class="text-red-300 text-[10px] font-bold p-2">X</button>
+                    <div class="text-right flex items-center gap-2">
+                        <div class="text-sm font-black text-indigo-600 mr-2">€${i.cost.toFixed(2)}</div>
+                        <div class="flex bg-slate-50 rounded-lg border border-slate-100">
+                            <button onclick="exportSingle('${i.id}')" class="text-emerald-500 text-[10px] font-bold p-2 border-r border-slate-100 hover:bg-emerald-50">EXP</button>
+                            <button onclick="editItem('${i.id}')" class="text-indigo-400 text-[10px] font-bold p-2 border-r border-slate-100 hover:bg-indigo-50">MOD</button>
+                            <button onclick="delItem('${i.id}')" class="text-red-300 text-[10px] font-bold p-2 hover:bg-red-50">X</button>
                         </div>
                     </div>`;
                 list.appendChild(div);
             });
         }
 
+        // --- SISTEMA EXPORT COMPLETO ---
+        function performExport(listToExport, format, fileName) {
+            const nowStr = new Date().toLocaleString();
+            const totalT = listToExport.reduce((acc, curr) => acc + curr.total, 0);
+            const totalC = listToExport.reduce((acc, curr) => acc + curr.cost, 0);
+
+            if (format === 'pdf') {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                doc.setFontSize(18); doc.setTextColor(79, 70, 229); doc.text("REPORT CNC PRO", 14, 20);
+                doc.setFontSize(10); doc.setTextColor(100); doc.text(`Generato: ${nowStr}`, 14, 28);
+                
+                const tableData = listToExport.map(i => [new Date(i.timestamp).toLocaleDateString(), i.order || "-", i.code, i.name, i.total.toFixed(1) + " min", "€ "+i.cost.toFixed(2)]);
+                doc.autoTable({
+                    startY: 35,
+                    head: [['DATA', 'CMD', 'DISEGNO', 'DESCRIZIONE', 'TEMPO', 'COSTO']],
+                    body: tableData,
+                    theme: 'grid',
+                    foot: [['TOTALI', '', '', '', totalT.toFixed(1) + ' min', '€ ' + totalC.toFixed(2)]],
+                    footStyles: { fillColor: [241, 245, 249], textColor: [0, 0, 0], fontStyle: 'bold' }
+                });
+                doc.save(`${fileName}.pdf`);
+
+            } else if (format === 'csv') {
+                let csv = "DATA;COMMESSA;CODICE;DESCRIZIONE;TEMPO;COSTO\n";
+                listToExport.forEach(i => csv += `${new Date(i.timestamp).toLocaleDateString()};${i.order || ''};${i.code};${i.name};${i.total.toFixed(1)} min;${i.cost.toFixed(2)}\n`);
+                csv += `\n;;;;TOTALI;${totalT.toFixed(1)};${totalC.toFixed(2)}`;
+                download(csv, `${fileName}.csv`, "text/csv");
+
+            } else if (format === 'txt') {
+                let txt = `REPORT OFFICINA - ${nowStr}\n==================================================\n`;
+                listToExport.forEach(i => {
+                    const d = new Date(i.timestamp).toLocaleDateString();
+                    txt += `${d} | CMD: ${i.order || '-'} | ${i.code} | ${i.total} min | €${i.cost.toFixed(2)}\n`;
+                });
+                txt += "==================================================\n";
+                txt += `TOT TEMPO: ${totalT.toFixed(1)} min | TOT COSTO: €${totalC.toFixed(2)}`;
+                download(txt, `${fileName}.txt`, "text/plain");
+
+            } else if (format === 'html') {
+                let html = `<html><head><style>table{width:100%;border-collapse:collapse;font-family:sans-serif;} th,td{border:1px solid #ddd;padding:8px;text-align:left;} th{background:#4f46e5;color:white;}</style></head><body>`;
+                html += `<h2>Report Produzione - ${nowStr}</h2><table><tr><th>Data</th><th>Commessa</th><th>Codice</th><th>Tempo</th><th>Costo</th></tr>`;
+                listToExport.forEach(i => html += `<tr><td>${new Date(i.timestamp).toLocaleDateString()}</td><td>${i.order || '-'}</td><td>${i.code}</td><td>${i.total.toFixed(1)} min</td><td>€ ${i.cost.toFixed(2)}</td></tr>`);
+                html += `<tr style="font-weight:bold;background:#eee"><td colspan="3">TOTALI</td><td>${totalT.toFixed(1)} min</td><td>€ ${totalC.toFixed(2)}</td></tr></table></body></html>`;
+                download(html, `${fileName}.html`, "text/html");
+            }
+        }
+
+        document.getElementById('run-export').onclick = () => performExport(filteredList, document.getElementById('export-format').value, "Export_List");
+        document.getElementById('pdf-report-shortcut').onclick = () => performExport(filteredList, 'pdf', "Report_Veloce");
+        window.exportSingle = id => performExport([dataList.find(x => x.id === id)], document.getElementById('export-format').value, "Scheda_Pezzo");
+
+        // GESTIONE ARCHIVI
+        document.getElementById('btn-del-local').onclick = async () => confirm("Svuotare Cache Locale?") && confirm("L'app verrà riavviata.") && (localStorage.clear() || await clearIndexedDbPersistence(db) || location.reload());
+        
+        const deleteFromCloud = async () => {
+            const batch = writeBatch(db);
+            const snap = await getDocs(collection(db, `users/${uid}/cnc_parts`));
+            snap.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+        };
+
+        document.getElementById('btn-del-cloud').onclick = async () => confirm("ELIMINARE TUTTO IL CLOUD?") && confirm("Azione Irreversibile!") && (await deleteFromCloud() || alert("Cloud Svuotato"));
+
+        document.getElementById('btn-del-total').onclick = async () => {
+            if(confirm("ELIMINAZIONE TOTALE (Locale + Cloud)?")) {
+                if(prompt("Scrivi 'ELIMINA' per confermare:") === "ELIMINA") {
+                    await deleteFromCloud();
+                    localStorage.clear();
+                    await clearIndexedDbPersistence(db);
+                    location.reload();
+                }
+            }
+        };
+
         window.editItem = id => {
             const i = dataList.find(x => x.id === id);
-            document.getElementById('part-code').value = i.code;
-            document.getElementById('part-name').value = i.name;
-            document.getElementById('order-no').value = i.order || '';
-            document.getElementById('setup-t').value = i.setup;
-            document.getElementById('prod-t').value = i.prod;
-            document.getElementById('hourly-rate').value = i.rate;
-            document.getElementById('edit-id').value = i.id;
-            updateCalculations();
-            window.scrollTo({top: 0, behavior: 'smooth'});
+            document.getElementById('part-code').value = i.code; document.getElementById('part-name').value = i.name;
+            document.getElementById('order-no').value = i.order || ''; document.getElementById('setup-t').value = i.setup;
+            document.getElementById('prod-t').value = i.prod; document.getElementById('hourly-rate').value = i.rate;
+            document.getElementById('edit-id').value = i.id; updateCalculations(); window.scrollTo({top: 0, behavior: 'smooth'});
         };
 
         window.delItem = id => confirm("Eliminare?") && deleteDoc(doc(db, `users/${uid}/cnc_parts`, id));
         document.getElementById('cancel-btn').onclick = clearForm;
-        
-        function clearForm() { 
-            document.querySelectorAll('input:not([type=email]):not([type=password]):not(#hourly-rate)').forEach(i => i.value = ""); 
-            document.getElementById('edit-id').value = "";
-            updateCalculations(); 
-        }
-
+        function clearForm() { document.querySelectorAll('input:not([type=email]):not([type=password]):not(#hourly-rate)').forEach(i => i.value = ""); document.getElementById('edit-id').value = ""; updateCalculations(); }
         document.getElementById('search').oninput = render;
 
-        // CANCELLAZIONE
-        document.getElementById('clear-local').onclick = () => confirm("Pulire cache browser?") && (localStorage.clear() || location.reload());
-        document.getElementById('clear-cloud').onclick = async () => {
-            if(confirm("ELIMINARE TUTTO ONLINE?")) {
-                const batch = writeBatch(db);
-                const snap = await getDocs(collection(db, `users/${uid}/cnc_parts`));
-                snap.forEach(doc => batch.delete(doc.ref));
-                await batch.commit();
-                alert("Cloud Svuotato");
-            }
+        // CHECK ONLINE/OFFLINE
+        const updateStatus = () => {
+            const pill = document.getElementById('status-pill');
+            pill.innerText = navigator.onLine ? "Online" : "Offline";
+            pill.className = navigator.onLine ? "status-online px-2 py-1 rounded text-[9px] font-bold uppercase" : "status-offline px-2 py-1 rounded text-[9px] font-bold uppercase";
         };
+        window.addEventListener('online', updateStatus); window.addEventListener('offline', updateStatus); updateStatus();
 
-        // EXPORT
-        document.getElementById('run-export').onclick = () => {
-            const format = document.getElementById('export-format').value;
-            const now = new Date().toLocaleString().replace(/[\/: ]/g, "-");
-            if (format === 'csv') {
-                let csv = "DATA;CODICE;COSTO\n";
-                dataList.forEach(i => csv += `${new Date(i.timestamp).toLocaleString()};${i.code};${i.cost.toFixed(2)}\n`);
-                download(csv, `Export_${now}.csv`, "text/csv");
-            } else if (format === 'txt') {
-                let txt = "BACKUP CNC\n";
-                dataList.forEach(i => txt += `[${new Date(i.timestamp).toLocaleString()}] ${i.code} - €${i.cost.toFixed(2)}\n`);
-                download(txt, `Backup_${now}.txt`, "text/plain");
-            } else {
-                let html = `<html><body style="font-family:sans-serif;padding:10px"><h2>Report</h2><table border="1" style="width:100%;border-collapse:collapse">`;
-                dataList.forEach(i => html += `<tr><td>${new Date(i.timestamp).toLocaleString()}</td><td>${i.code}</td><td>€${i.cost.toFixed(2)}</td></tr>`);
-                html += `</table></body></html>`;
-                download(html, `Report_${now}.html`, "text/html");
-            }
-        };
+        function download(content, name, type) { const blob = new Blob([content], {type}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); }
+    </script>
 
-        function download(content, name, type) {
-            const blob = new Blob([content], {type});
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob); a.download = name; a.click();
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW registrato:', reg.scope))
+                    .catch(err => console.log('SW Errore:', err));
+            });
         }
     </script>
 </body>
