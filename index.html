@@ -3,109 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CNC Manager Pro</title>
+    <title>CNC Manager Pro - Moralex00</title>
     
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#4f46e5">
-    <link rel="apple-touch-icon" href="icon-192.png">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; padding: 1rem; user-select: none; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; padding: 1rem; user-select: none; padding-bottom: 4rem; }
         .card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
         .btn-primary { background-color: #4f46e5; color: white; padding: 0.7rem; border-radius: 8px; font-weight: 600; width: 100%; transition: 0.2s; cursor: pointer; }
         .btn-primary:active { transform: scale(0.98); }
         .btn-action { background-color: #1e293b; color: white; padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: 600; transition: 0.2s; cursor: pointer; }
-        input, select { border: 1px solid #e2e8f0; padding: 0.6rem; border-radius: 8px; width: 100%; margin-bottom: 0.5rem; outline-color: #4f46e5; background: white; }
-        .label-style { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: #64748b; margin-bottom: 0.2rem; display: block; }
+        
+        input, select { border: 1px solid #e2e8f0; padding: 0.6rem; border-radius: 8px; width: 100%; margin-bottom: 0.5rem; outline-color: #4f46e5; background: white; font-size: 14px; }
+        .label-style { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: #64748b; margin-bottom: 0.2rem; display: block; }
         .item-row { border-bottom: 1px solid #f1f5f9; padding: 1rem 0; }
         .hidden { display: none !important; }
         
-        .btn-danger-outline { border: 1px solid #fca5a5; color: #ef4444; padding: 0.5rem; border-radius: 8px; font-size: 0.7rem; font-weight: bold; transition: 0.2s; background: white; cursor: pointer; }
+        .btn-danger-outline { border: 1px solid #fca5a5; color: #ef4444; padding: 0.5rem; border-radius: 8px; font-size: 0.7rem; font-weight: bold; background: white; cursor: pointer; }
         .btn-danger-full { background-color: #ef4444; color: white; padding: 0.5rem; border-radius: 8px; font-size: 0.7rem; font-weight: bold; border: 1px solid #dc2626; cursor: pointer; }
         
-        #status-pill { transition: 0.3s; }
         .status-online { background: #ecfdf5; color: #059669; border: 1px solid #10b981; }
-        .status-offline { background: #fef2f2; color: #dc2626; border: 1px solid #ef4444; }
-        
         #search-summary-box { background: #eef2ff; border: 1px dashed #4f46e5; border-radius: 8px; padding: 0.75rem; margin-top: 0.5rem; display: none; }
         
-        .order-badge { 
-            background-color: #e0e7ff; color: #4338ca; padding: 2px 6px; 
-            border-radius: 4px; font-size: 10px; font-weight: 800; 
-            border: 1px solid #c7d2fe; margin-right: 8px; 
-            display: inline-block; vertical-align: middle;
-        }
+        .badge { padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; border: 1px solid transparent; display: inline-block; text-transform: uppercase; }
+        .order-badge { background-color: #e0e7ff; color: #4338ca; border-color: #c7d2fe; }
+        .qty-badge { background-color: #f1f5f9; color: #64748b; border-color: #e2e8f0; }
+        .mat-badge { background-color: #fff7ed; color: #9a3412; border-color: #ffedd5; }
+        .machine-badge { background-color: #f0fdf4; color: #166534; border-color: #dcfce7; }
+        
+        footer { position: fixed; bottom: 0; left: 0; width: 100%; background: #f1f5f9; text-align: center; padding: 0.8rem; font-size: 0.7rem; font-weight: bold; color: #94a3b8; border-top: 1px solid #e2e8f0; }
     </style>
 </head>
 <body>
 
     <div id="auth-section" class="max-w-md mx-auto mt-16 card">
         <h2 class="text-2xl font-bold text-center mb-6 text-indigo-900">Database Officina</h2>
-        <input type="email" id="email" placeholder="Email aziendale">
+        <input type="email" id="email" placeholder="Email">
         <input type="password" id="password" placeholder="Password">
         <button id="login-btn" class="btn-primary mb-3">Accedi</button>
         <button id="reg-btn" class="w-full text-sm text-gray-400">Registrati</button>
     </div>
 
-    <div id="app-section" class="max-w-5xl mx-auto space-y-6 hidden">
+    <div id="app-section" class="max-w-6xl mx-auto space-y-6 hidden">
         
         <div class="flex flex-wrap justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-100 gap-3">
             <div class="flex items-center gap-3">
                 <h1 class="text-xl font-extrabold text-indigo-900 tracking-tighter">CNC MANAGER PRO</h1>
-                <div id="status-pill" class="status-online px-2 py-1 rounded text-[9px] font-bold uppercase">Online</div>
+                <div id="status-pill" class="status-online badge uppercase">Online</div>
             </div>
             <div class="flex items-center gap-3">
-                <span id="user-display" class="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1.5 rounded-lg border border-indigo-100 uppercase truncate max-w-[150px]"></span>
+                <span id="user-display" class="badge order-badge truncate max-w-[150px]"></span>
                 <button id="logout-btn" class="text-red-500 text-[10px] font-bold border border-red-100 px-3 py-1.5 rounded-lg">LOGOUT</button>
             </div>
         </div>
 
         <div class="card grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="space-y-1">
-                <label class="label-style">Anagrafica Pezzo</label>
-                <input type="text" id="part-code" placeholder="CODICE DISEGNO" class="uppercase font-bold">
-                <input type="text" id="part-name" placeholder="DESCRIZIONE">
-                <input type="text" id="order-no" placeholder="NUMERO COMMESSA" class="uppercase font-bold text-indigo-700">
+                <label class="label-style">Anagrafica Commessa</label>
+                <div class="flex gap-2">
+                    <input type="text" id="order-no" placeholder="N° CMD" class="uppercase font-bold text-indigo-700 w-1/2">
+                    <input type="text" id="machine-name" placeholder="MACCHINA" class="uppercase font-bold w-1/2">
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="part-code" placeholder="DISEGNO" class="uppercase font-bold w-2/3">
+                    <input type="number" id="part-qty" placeholder="Q.tà" value="1" min="1" class="font-bold text-center border-indigo-200 bg-indigo-50/30 w-1/3">
+                </div>
+                <input type="text" id="part-mat" placeholder="MATERIALE USATO" class="uppercase">
+                <input type="text" id="part-name" placeholder="NOTE / DESCRIZIONE">
             </div>
+            
             <div class="space-y-1">
-                <label class="label-style">Tempi e Costi</label>
-                <input type="number" id="setup-t" placeholder="Piazzamento (min)">
-                <input type="number" id="prod-t" placeholder="Produzione (min)">
+                <label class="label-style">Tempi (Minuti)</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><span class="text-[8px] text-gray-400 uppercase font-bold">Piazzamento</span><input type="number" id="setup-t" placeholder="Min."></div>
+                    <div><span class="text-[8px] text-gray-400 uppercase font-bold">Ciclo (Pz)</span><input type="number" id="prod-t" placeholder="Min."></div>
+                </div>
+                <label class="label-style">Tariffa Oraria</label>
                 <div class="relative">
                     <span class="absolute right-3 top-2.5 text-gray-400 text-sm">€/h</span>
                     <input type="number" id="hourly-rate" value="60">
                 </div>
             </div>
+
             <div class="flex flex-col justify-end space-y-3">
                 <div class="grid grid-cols-2 gap-2">
-                    <div class="p-3 bg-slate-50 rounded-lg text-center"><p class="text-[10px] text-gray-400 uppercase font-bold">Tempo</p><p class="font-bold text-slate-700"><span id="total-val">0</span> m</p></div>
-                    <div class="p-3 bg-emerald-50 rounded-lg text-center border border-emerald-100"><p class="text-[10px] text-emerald-600 uppercase font-bold">Costo</p><p class="font-bold text-emerald-700">€ <span id="cost-val">0.00</span></p></div>
+                    <div class="p-3 bg-slate-50 rounded-lg text-center border">
+                        <p class="text-[9px] text-gray-500 font-bold uppercase">Tempo Totale</p>
+                        <p class="font-bold text-slate-800 text-xl"><span id="total-val">0</span> m</p>
+                    </div>
+                    <div class="p-3 bg-emerald-50 rounded-lg text-center border border-emerald-200">
+                        <p class="text-[9px] text-emerald-700 font-bold uppercase">Costo Lotto</p>
+                        <p class="font-black text-emerald-600 text-xl">€ <span id="cost-val">0.00</span></p>
+                    </div>
                 </div>
                 <input type="hidden" id="edit-id">
-                <button id="save-btn" class="btn-primary">SALVA DATI</button>
-                <button id="cancel-btn" class="text-xs text-gray-400 underline text-center cursor-pointer">Pulisci campi</button>
+                <button id="save-btn" class="btn-primary">SALVA COMMESSA</button>
+                <button id="cancel-btn" class="text-xs text-gray-400 underline text-center">Svuota campi</button>
             </div>
         </div>
 
         <div class="card">
             <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4 items-end">
                 <div class="md:col-span-7">
-                    <label class="label-style">Cerca per Commessa, Disegno o Nome</label>
-                    <input type="text" id="search" placeholder="Cerca..." class="mb-0">
+                    <label class="label-style">Ricerca Globale</label>
+                    <input type="text" id="search" placeholder="Cerca macchina, materiale, disegno..." class="mb-0">
                 </div>
                 <div class="md:col-span-3">
-                    <label class="label-style">Formato Export</label>
+                    <label class="label-style">Formato</label>
                     <select id="export-format" class="mb-0">
-                        <option value="pdf">Documento PDF</option>
-                        <option value="csv">Foglio Excel (CSV)</option>
-                        <option value="txt">Testo (TXT)</option>
-                        <option value="html">Tabella Web (HTML)</option>
+                        <option value="pdf">PDF</option>
+                        <option value="csv">CSV (Excel)</option>
+                        <option value="txt">Testo</option>
                     </select>
                 </div>
                 <div class="md:col-span-2">
@@ -114,10 +124,10 @@
             </div>
 
             <div id="search-summary-box" class="flex flex-wrap justify-between items-center gap-4">
-                <button id="pdf-report-shortcut" class="bg-indigo-600 text-white text-[10px] font-bold px-3 py-2 rounded shadow hover:bg-indigo-700 uppercase">PDF Rapido</button>
+                <button id="pdf-report-shortcut" class="bg-indigo-600 text-white text-[10px] font-bold px-3 py-2 rounded shadow uppercase">PDF Rapido</button>
                 <div class="flex gap-4">
-                    <div class="text-right"><p class="text-[8px] text-gray-500 uppercase">Tempo Tot.</p><p class="font-black text-indigo-900 text-sm" id="sum-time">0 m</p></div>
-                    <div class="text-right"><p class="text-[8px] text-gray-500 uppercase">Costo Tot.</p><p class="font-black text-emerald-600 text-sm" id="sum-cost">€ 0.00</p></div>
+                    <div class="text-right"><p class="text-[8px] uppercase">Ore Tot</p><p class="font-black text-indigo-900" id="sum-time">0 h</p></div>
+                    <div class="text-right"><p class="text-[8px] uppercase">Valore Tot</p><p class="font-black text-emerald-600" id="sum-cost">€ 0.00</p></div>
                 </div>
             </div>
 
@@ -125,19 +135,16 @@
         </div>
 
         <div class="card bg-red-50/20 border border-red-100">
-            <h3 class="text-xs font-black text-red-800 uppercase mb-4 tracking-widest text-center">Gestione Archivi</h3>
+            <h3 class="text-xs font-black text-red-800 uppercase mb-4 text-center">Manutenzione Database</h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <button id="btn-del-local" class="btn-danger-outline uppercase">Elimina Dati Locale</button>
-                <button id="btn-del-cloud" class="btn-danger-outline uppercase">Elimina Dati Cloud</button>
-                <button id="btn-del-total" class="btn-danger-full uppercase shadow-lg">Elimina Tutto (Totale)</button>
+                <button id="btn-del-local" class="btn-danger-outline uppercase">Svuota Cache</button>
+                <button id="btn-del-cloud" class="btn-danger-outline uppercase">Svuota Cloud</button>
+                <button id="btn-del-total" class="btn-danger-full uppercase shadow-lg">ELIMINA TUTTO</button>
             </div>
-            <p class="text-[9px] text-gray-400 text-center mt-3 uppercase font-medium">Attenzione: le operazioni cloud sono irreversibili.</p>
         </div>
-
-        <footer class="mt-8 pb-6 text-center border-t border-slate-200 pt-6">
-            <p class="text-[10px] font-semibold text-slate-400 tracking-widest uppercase italic">copyright moralex00 v.1</p>
-        </footer>
     </div>
+
+    <footer>Copyright Moralex00 v.1</footer>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -157,8 +164,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // PERSISTENZA OFFLINE
-        try { await enableIndexedDbPersistence(db); } catch (err) { console.log(err.code); }
+        try { await enableIndexedDbPersistence(db); } catch (err) {}
 
         let uid, dataList = [], filteredList = [], unsubscribe = () => {};
 
@@ -183,34 +189,37 @@
             unsubscribe = onSnapshot(collection(db, `users/${uid}/cnc_parts`), snap => {
                 dataList = snap.docs.map(d => ({id: d.id, ...d.data()}));
                 dataList.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+                filteredList = [...dataList];
                 render();
             });
         }
 
         const calc = () => {
-            const s = parseFloat(document.getElementById('setup-t').value) || 0;
-            const p = parseFloat(document.getElementById('prod-t').value) || 0;
-            const r = parseFloat(document.getElementById('hourly-rate').value) || 0;
-            const total = s + p; const cost = (total / 60) * r;
+            const qty = parseFloat(document.getElementById('part-qty').value) || 1;
+            const setup = parseFloat(document.getElementById('setup-t').value) || 0;
+            const prod = parseFloat(document.getElementById('prod-t').value) || 0;
+            const rate = parseFloat(document.getElementById('hourly-rate').value) || 0;
+            const total = setup + (prod * qty); 
+            const cost = (total / 60) * rate;
             document.getElementById('total-val').innerText = total.toFixed(1);
             document.getElementById('cost-val').innerText = cost.toFixed(2);
-            return { total, cost, r };
+            return { total, cost, rate, qty, setup, prod };
         };
 
-        ['setup-t', 'prod-t', 'hourly-rate'].forEach(id => document.getElementById(id).oninput = calc);
+        ['part-qty', 'setup-t', 'prod-t', 'hourly-rate'].forEach(id => document.getElementById(id).oninput = calc);
 
         document.getElementById('save-btn').onclick = async () => {
-            const { total, cost, r } = calc();
+            const { total, cost, rate, qty, setup, prod } = calc();
             const part = {
                 code: document.getElementById('part-code').value.toUpperCase().trim(),
                 name: document.getElementById('part-name').value.trim(),
                 order: document.getElementById('order-no').value.toUpperCase().trim(),
-                setup: parseFloat(document.getElementById('setup-t').value) || 0,
-                prod: parseFloat(document.getElementById('prod-t').value) || 0,
-                rate: r, total: total, cost: cost,
+                machine: document.getElementById('machine-name').value.toUpperCase().trim(),
+                material: document.getElementById('part-mat').value.toUpperCase().trim(),
+                qty, setup, prod, rate, total, cost,
                 timestamp: new Date().toISOString()
             };
-            if(!part.code) return alert("Inserisci il codice!");
+            if(!part.code) return alert("Codice obbligatorio!");
             const id = document.getElementById('edit-id').value;
             id ? await setDoc(doc(db, `users/${uid}/cnc_parts`, id), part) : await addDoc(collection(db, `users/${uid}/cnc_parts`), part);
             clearForm();
@@ -220,28 +229,39 @@
             const list = document.getElementById('list');
             const search = document.getElementById('search').value.toLowerCase();
             list.innerHTML = "";
-            filteredList = dataList.filter(i => i.code.toLowerCase().includes(search) || i.name.toLowerCase().includes(search) || (i.order && i.order.toLowerCase().includes(search)));
+            filteredList = dataList.filter(i => 
+                i.code.toLowerCase().includes(search) || 
+                (i.machine && i.machine.toLowerCase().includes(search)) || 
+                (i.order && i.order.toLowerCase().includes(search)) || 
+                (i.material && i.material.toLowerCase().includes(search))
+            );
             
             document.getElementById('search-summary-box').style.display = search ? 'flex' : 'none';
-            const tT = filteredList.reduce((a, b) => a + b.total, 0);
-            const tC = filteredList.reduce((a, b) => a + b.cost, 0);
-            document.getElementById('sum-time').innerText = tT.toFixed(1) + " m";
+            const tT = filteredList.reduce((a, b) => a + (b.total || 0), 0);
+            const tC = filteredList.reduce((a, b) => a + (b.cost || 0), 0);
+            document.getElementById('sum-time').innerText = (tT/60).toFixed(1) + " h";
             document.getElementById('sum-cost').innerText = "€ " + tC.toFixed(2);
 
             filteredList.forEach(i => {
-                const dStr = new Date(i.timestamp).toLocaleDateString();
                 const div = document.createElement('div');
                 div.className = "item-row flex justify-between items-center";
                 div.innerHTML = `
                     <div class="flex-1">
-                        <div class="flex items-center mb-1"><span class="order-badge">${i.order || 'N/A'}</span><p class="font-black text-indigo-900 text-sm uppercase">${i.code}</p></div>
-                        <p class="text-[10px] text-gray-400 font-medium uppercase ml-1">Data: ${dStr} | ${i.name}</p>
+                        <div class="flex items-center mb-1 flex-wrap gap-1">
+                            <span class="badge order-badge">${i.order || 'NO CMD'}</span>
+                            <span class="badge machine-badge">${i.machine || 'MACC.'}</span>
+                            <span class="badge qty-badge">x${i.qty || 1}</span>
+                            ${i.material ? `<span class="badge mat-badge">${i.material}</span>` : ''}
+                            <p class="font-black text-indigo-900 text-sm uppercase ml-1">${i.code}</p>
+                        </div>
+                        <p class="text-[10px] text-gray-400 font-medium ml-1">${i.name || '-'}</p>
+                        <div class="text-[9px] font-bold text-slate-500 mt-1 ml-1">Setup: ${i.setup}m | Ciclo: ${i.prod}m | Tot: ${i.total.toFixed(1)}m</div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <div class="text-sm font-black text-indigo-600 mr-2">€${i.cost.toFixed(2)}</div>
-                        <div class="flex bg-slate-50 rounded-lg border border-slate-100">
-                            <button onclick="exportSingle('${i.id}')" class="text-emerald-500 text-[10px] font-bold p-2 border-r border-slate-100">EXP</button>
-                            <button onclick="editItem('${i.id}')" class="text-indigo-400 text-[10px] font-bold p-2 border-r border-slate-100">MOD</button>
+                        <div class="text-right mr-2"><div class="text-[8px] text-emerald-600 font-bold uppercase">Lotto</div><div class="text-sm font-black text-emerald-600">€${i.cost.toFixed(2)}</div></div>
+                        <div class="flex bg-slate-50 rounded-lg border">
+                            <button onclick="exportSingle('${i.id}')" class="text-emerald-500 text-[10px] font-bold p-2 border-r">EXP</button>
+                            <button onclick="editItem('${i.id}')" class="text-indigo-400 text-[10px] font-bold p-2 border-r">MOD</button>
                             <button onclick="delItem('${i.id}')" class="text-red-300 text-[10px] font-bold p-2">X</button>
                         </div>
                     </div>`;
@@ -249,83 +269,57 @@
             });
         }
 
-        // EXPORT LOGIC
-        function performExport(list, format, fileName) {
+        window.performExport = (list, format, fileName) => {
+            if(!list.length) return alert("Nessun dato!");
             const now = new Date().toLocaleString();
-            const tT = list.reduce((a, b) => a + b.total, 0);
-            const tC = list.reduce((a, b) => a + b.cost, 0);
-
             if (format === 'pdf') {
-                const { jsPDF } = window.jspdf; const doc = new jsPDF();
-                doc.text("REPORT CNC PRO - " + now, 14, 15);
-                const rows = list.map(i => [new Date(i.timestamp).toLocaleDateString(), i.order || "-", i.code, i.total.toFixed(1) + " min", "€ " + i.cost.toFixed(2)]);
-                doc.autoTable({ startY: 25, head: [['DATA', 'CMD', 'DISEGNO', 'TEMPO', 'COSTO']], body: rows, foot: [['TOTALI', '', '', tT.toFixed(1) + ' min', '€ ' + tC.toFixed(2)]] });
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('l', 'mm', 'a4');
+                doc.text("REPORT PRODUZIONE CNC - " + now, 14, 15);
+                const rows = list.map(i => [new Date(i.timestamp).toLocaleDateString(), i.order, i.machine, i.code, i.material, i.qty, i.total.toFixed(1), "€ "+i.cost.toFixed(2)]);
+                doc.autoTable({ startY: 25, head: [['DATA', 'CMD', 'MACCHINA', 'DISEGNO', 'MAT.', 'QTA', 'MIN', 'COSTO']], body: rows, theme: 'grid', styles: {fontSize: 8}});
                 doc.save(`${fileName}.pdf`);
-            } else if (format === 'txt') {
-                let txt = `REPORT CNC - ${now}\n` + "=".repeat(40) + "\n";
-                list.forEach(i => txt += `${new Date(i.timestamp).toLocaleDateString()} | ${i.order} | ${i.code} | ${i.total} min | €${i.cost.toFixed(2)}\n`);
-                download(txt, `${fileName}.txt`, "text/plain");
-            } else if (format === 'html') {
-                let h = `<html><body><h2>Report ${now}</h2><table border="1"><tr><th>Data</th><th>CMD</th><th>Codice</th><th>Min</th><th>Costo</th></tr>`;
-                list.forEach(i => h += `<tr><td>${new Date(i.timestamp).toLocaleDateString()}</td><td>${i.order}</td><td>${i.code}</td><td>${i.total}</td><td>${i.cost.toFixed(2)}</td></tr>`);
-                h += `</table></body></html>`;
-                download(h, `${fileName}.html`, "text/html");
             } else if (format === 'csv') {
-                let csv = "DATA;CMD;CODICE;MIN;COSTO\n";
-                list.forEach(i => csv += `${new Date(i.timestamp).toLocaleDateString()};${i.order};${i.code};${i.total};${i.cost.toFixed(2)}\n`);
-                download(csv, `${fileName}.csv`, "text/csv");
+                let c = "DATA;CMD;MACCHINA;DISEGNO;MATERIALE;QTA;MIN_TOT;EURO\n";
+                list.forEach(i => c += `${new Date(i.timestamp).toLocaleDateString()};${i.order};${i.machine};${i.code};${i.material};${i.qty};${i.total};${i.cost}\n`);
+                downloadFile(c, `${fileName}.csv`, "text/csv");
+            } else {
+                let t = `REPORT CNC ${now}\n` + "=".repeat(40) + "\n";
+                list.forEach(i => t += `${i.order} | ${i.machine} | ${i.code} | € ${i.cost}\n`);
+                downloadFile(t, `${fileName}.txt`, "text/plain");
             }
-        }
+        };
 
-        document.getElementById('run-export').onclick = () => performExport(filteredList, document.getElementById('export-format').value, "Export_CNC");
-        window.exportSingle = id => performExport([dataList.find(x => x.id === id)], document.getElementById('export-format').value, "Pezzo_Singolo");
+        window.exportSingle = (id) => performExport([dataList.find(x => x.id === id)], 'pdf', "Scheda_CNC");
+        document.getElementById('run-export').onclick = () => performExport(filteredList, document.getElementById('export-format').value, "Lista_CNC");
         document.getElementById('pdf-report-shortcut').onclick = () => performExport(filteredList, 'pdf', "Report_Rapido");
 
-        // GESTIONE ELIMINAZIONE
-        document.getElementById('btn-del-local').onclick = async () => confirm("Svuota Cache locale?") && (await clearIndexedDbPersistence(db) || location.reload());
-        
-        document.getElementById('btn-del-cloud').onclick = async () => {
-            if(confirm("Eliminare TUTTO il Cloud?")) {
-                const batch = writeBatch(db);
-                const s = await getDocs(collection(db, `users/${uid}/cnc_parts`));
-                s.forEach(d => batch.delete(d.ref));
-                await batch.commit();
-                alert("Cloud svuotato.");
-            }
-        };
+        function downloadFile(c, n, t) { const b = new Blob([c], {type: t}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = n; a.click(); }
 
-        document.getElementById('btn-del-total').onclick = async () => {
-            if (confirm("ATTENZIONE: Eliminazione TOTALE (Cloud + Locale). Sei sicuro?")) {
-                if (prompt("Scrivi ELIMINA per confermare:") === "ELIMINA") {
-                    try {
-                        const batch = writeBatch(db);
-                        const s = await getDocs(collection(db, `users/${uid}/cnc_parts`));
-                        s.forEach(d => batch.delete(d.ref));
-                        await batch.commit();
-                        localStorage.clear();
-                        setTimeout(async () => {
-                            await clearIndexedDbPersistence(db);
-                            location.reload();
-                        }, 500);
-                    } catch (e) { alert("Errore connessione."); }
-                }
-            }
-        };
+        document.getElementById('btn-del-local').onclick = async () => confirm("Pulisci telefono?") && (await clearIndexedDbPersistence(db) || location.reload());
+        document.getElementById('btn-del-cloud').onclick = async () => { if(confirm("Svuota Cloud?")) { const b=writeBatch(db); (await getDocs(collection(db, `users/${uid}/cnc_parts`))).forEach(d=>b.delete(d.ref)); await b.commit(); } };
+        document.getElementById('btn-del-total').onclick = async () => { if (prompt("Scrivi ELIMINA per resettare tutto:") === "ELIMINA") { const b=writeBatch(db); (await getDocs(collection(db, `users/${uid}/cnc_parts`))).forEach(d=>b.delete(d.ref)); await b.commit(); localStorage.clear(); await clearIndexedDbPersistence(db); location.reload(); } };
 
         window.editItem = id => {
             const i = dataList.find(x => x.id === id);
-            document.getElementById('part-code').value = i.code; document.getElementById('part-name').value = i.name;
-            document.getElementById('order-no').value = i.order || ''; document.getElementById('setup-t').value = i.setup;
-            document.getElementById('prod-t').value = i.prod; document.getElementById('edit-id').value = i.id; calc();
+            document.getElementById('part-code').value = i.code; 
+            document.getElementById('part-name').value = i.name || '';
+            document.getElementById('order-no').value = i.order || ''; 
+            document.getElementById('machine-name').value = i.machine || '';
+            document.getElementById('part-mat').value = i.material || '';
+            document.getElementById('part-qty').value = i.qty || 1; 
+            document.getElementById('setup-t').value = i.setup || 0; 
+            document.getElementById('prod-t').value = i.prod || 0; 
+            document.getElementById('edit-id').value = i.id; 
+            calc(); window.scrollTo({top: 0, behavior: 'smooth'});
         };
-
-        window.delItem = id => confirm("Eliminare?") && deleteDoc(doc(db, `users/${uid}/cnc_parts`, id));
+        window.delItem = id => confirm("Eliminare riga?") && deleteDoc(doc(db, `users/${uid}/cnc_parts`, id));
         document.getElementById('cancel-btn').onclick = clearForm;
-        function clearForm() { document.querySelectorAll('input:not([type=email]):not([type=password]):not(#hourly-rate)').forEach(i => i.value = ""); document.getElementById('edit-id').value = ""; calc(); }
+        function clearForm() { 
+            document.querySelectorAll('input:not([type=email]):not([type=password]):not(#hourly-rate)').forEach(i => i.value = ""); 
+            document.getElementById('part-qty').value = "1"; document.getElementById('edit-id').value = ""; calc(); 
+        }
         document.getElementById('search').oninput = render;
-        function download(c, n, t) { const b = new Blob([c], {type:t}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = n; a.click(); }
-
-        if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js')); }
     </script>
 </body>
-</html
+</html>
