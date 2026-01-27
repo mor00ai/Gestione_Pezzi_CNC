@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CNC Manager Pro - Moralex00</title>
     
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
@@ -33,6 +36,8 @@
         .mat-badge { background-color: #fff7ed; color: #9a3412; border-color: #ffedd5; }
         .machine-badge { background-color: #f0fdf4; color: #166534; border-color: #dcfce7; }
         
+        #duplicate-info { position: absolute; z-index: 50; top: 100%; left: 0; right: 0; background: #fffbeb; border: 1px solid #f59e0b; padding: 10px; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+
         footer { position: fixed; bottom: 0; left: 0; width: 100%; background: #f1f5f9; text-align: center; padding: 0.8rem; font-size: 0.7rem; font-weight: bold; color: #94a3b8; border-top: 1px solid #e2e8f0; }
     </style>
 </head>
@@ -66,8 +71,15 @@
                     <input type="text" id="order-no" placeholder="N° CMD" class="uppercase font-bold text-indigo-700 w-1/2">
                     <input type="text" id="machine-name" placeholder="MACCHINA" class="uppercase font-bold w-1/2">
                 </div>
-                <div class="flex gap-2">
-                    <input type="text" id="part-code" placeholder="DISEGNO" class="uppercase font-bold w-2/3">
+                <div class="flex gap-2 relative">
+                    <div class="w-2/3 relative">
+                        <input type="text" id="part-code" placeholder="DISEGNO" class="uppercase font-bold w-full">
+                        <div id="duplicate-info" class="hidden">
+                            <p class="text-[10px] font-black text-amber-800 uppercase">⚠️ Disegno già a sistema</p>
+                            <div id="dup-details" class="text-[9px] text-amber-700 mt-1 leading-tight"></div>
+                            <button id="btn-copy-old" class="mt-2 w-full bg-amber-600 text-white text-[9px] font-bold py-1.5 rounded uppercase">Copia Dati Tecnici</button>
+                        </div>
+                    </div>
                     <input type="number" id="part-qty" placeholder="Q.tà" value="1" min="1" class="font-bold text-center border-indigo-200 bg-indigo-50/30 w-1/3">
                 </div>
                 <input type="text" id="part-mat" placeholder="MATERIALE USATO" class="uppercase">
@@ -134,9 +146,12 @@
             <div id="list" class="divide-y divide-gray-100 mt-4"></div>
         </div>
 
-        <div class="card bg-red-50/20 border border-red-100">
-            <h3 class="text-xs font-black text-red-800 uppercase mb-4 text-center">Manutenzione Database</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="card bg-slate-50 border border-slate-200">
+            <h3 class="text-xs font-black text-slate-500 uppercase mb-4 text-center">Sicurezza e Manutenzione</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <button id="btn-backup-json" class="bg-blue-600 text-white text-[10px] font-bold p-3 rounded-lg uppercase shadow">💾 Backup JSON</button>
+                <button id="btn-import-trigger" class="bg-amber-500 text-white text-[10px] font-bold p-3 rounded-lg uppercase shadow">📥 Ripristina Backup</button>
+                <input type="file" id="import-input" accept=".json" class="hidden">
                 <button id="btn-del-local" class="btn-danger-outline uppercase">Svuota Cache</button>
                 <button id="btn-del-cloud" class="btn-danger-outline uppercase">Svuota Cloud</button>
                 <button id="btn-del-total" class="btn-danger-full uppercase shadow-lg">ELIMINA TUTTO</button>
@@ -145,6 +160,14 @@
     </div>
 
     <footer>Copyright Moralex00 v.1</footer>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js')
+            .then(() => console.log('Service Worker Registrato!'))
+            .catch(err => console.error('Errore SW:', err));
+        }
+    </script>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -208,6 +231,88 @@
 
         ['part-qty', 'setup-t', 'prod-t', 'hourly-rate'].forEach(id => document.getElementById(id).oninput = calc);
 
+        // --- GESTIONE DUPLICATI / STORICO ---
+        const codeIn = document.getElementById('part-code');
+        const dupBox = document.getElementById('duplicate-info');
+        const dupDet = document.getElementById('dup-details');
+        let oldPart = null;
+
+        codeIn.oninput = () => {
+            const val = codeIn.value.toUpperCase().trim();
+            const editId = document.getElementById('edit-id').value;
+            if (val.length < 2) return dupBox.classList.add('hidden');
+
+            oldPart = dataList.find(i => i.code === val && i.id !== editId);
+
+            if (oldPart) {
+                dupBox.classList.remove('hidden');
+                dupDet.innerHTML = `
+                    <b>CMD:</b> ${oldPart.order || '-'}<br>
+                    <b>Materiale:</b> ${oldPart.material || '-'}<br>
+                    <b>Setup:</b> ${oldPart.setup}m | <b>Ciclo:</b> ${oldPart.prod}m<br>
+                    <b class="text-emerald-700">Tariffa: €${oldPart.rate || 0}/h</b><br>
+                    <b>Macchina:</b> ${oldPart.machine || '-'}
+                `;
+            } else {
+                dupBox.classList.add('hidden');
+            }
+        };
+
+        document.getElementById('btn-copy-old').onclick = (e) => {
+            e.preventDefault();
+            if (oldPart) {
+                document.getElementById('setup-t').value = oldPart.setup;
+                document.getElementById('prod-t').value = oldPart.prod;
+                document.getElementById('part-mat').value = oldPart.material || '';
+                document.getElementById('machine-name').value = oldPart.machine || '';
+                document.getElementById('hourly-rate').value = oldPart.rate || 60;
+                calc();
+                dupBox.classList.add('hidden');
+            }
+        };
+
+        document.addEventListener('click', (e) => {
+            if (!codeIn.contains(e.target) && !dupBox.contains(e.target)) dupBox.classList.add('hidden');
+        });
+
+        // --- BACKUP E IMPORT ---
+        document.getElementById('btn-backup-json').onclick = () => {
+            if (!dataList.length) return alert("Nessun dato da salvare.");
+            const dataStr = JSON.stringify(dataList, null, 2);
+            const blob = new Blob([dataStr], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Backup_CNC_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+        };
+
+        document.getElementById('btn-import-trigger').onclick = () => document.getElementById('import-input').click();
+
+        document.getElementById('import-input').onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const importedData = JSON.parse(event.target.result);
+                    if (!Array.isArray(importedData)) throw new Error("Formato non valido");
+                    if (confirm(`Stai per importare ${importedData.length} elementi. Continuare?`)) {
+                        const b = writeBatch(db);
+                        importedData.forEach(item => {
+                            const { id, ...cleanItem } = item;
+                            const newDoc = doc(collection(db, `users/${uid}/cnc_parts`));
+                            b.set(newDoc, cleanItem);
+                        });
+                        await b.commit();
+                        alert("Importazione completata con successo!");
+                    }
+                } catch (err) { alert("Errore durante l'importazione."); }
+                e.target.value = ""; 
+            };
+            reader.readAsText(file);
+        };
+
         document.getElementById('save-btn').onclick = async () => {
             const { total, cost, rate, qty, setup, prod } = calc();
             const part = {
@@ -255,7 +360,7 @@
                             <p class="font-black text-indigo-900 text-sm uppercase ml-1">${i.code}</p>
                         </div>
                         <p class="text-[10px] text-gray-400 font-medium ml-1">${i.name || '-'}</p>
-                        <div class="text-[9px] font-bold text-slate-500 mt-1 ml-1">Setup: ${i.setup}m | Ciclo: ${i.prod}m | Tot: ${i.total.toFixed(1)}m</div>
+                        <div class="text-[9px] font-bold text-slate-500 mt-1 ml-1">Setup: ${i.setup}m | Ciclo: ${i.prod}m | Tot: ${i.total.toFixed(1)}m | €${i.rate}/h</div>
                     </div>
                     <div class="flex items-center gap-2">
                         <div class="text-right mr-2"><div class="text-[8px] text-emerald-600 font-bold uppercase">Lotto</div><div class="text-sm font-black text-emerald-600">€${i.cost.toFixed(2)}</div></div>
@@ -296,9 +401,37 @@
 
         function downloadFile(c, n, t) { const b = new Blob([c], {type: t}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = n; a.click(); }
 
-        document.getElementById('btn-del-local').onclick = async () => confirm("Pulisci telefono?") && (await clearIndexedDbPersistence(db) || location.reload());
-        document.getElementById('btn-del-cloud').onclick = async () => { if(confirm("Svuota Cloud?")) { const b=writeBatch(db); (await getDocs(collection(db, `users/${uid}/cnc_parts`))).forEach(d=>b.delete(d.ref)); await b.commit(); } };
-        document.getElementById('btn-del-total').onclick = async () => { if (prompt("Scrivi ELIMINA per resettare tutto:") === "ELIMINA") { const b=writeBatch(db); (await getDocs(collection(db, `users/${uid}/cnc_parts`))).forEach(d=>b.delete(d.ref)); await b.commit(); localStorage.clear(); await clearIndexedDbPersistence(db); location.reload(); } };
+        const checkPassword = () => {
+            const pass = prompt("Password di sicurezza:");
+            if (pass === "1234") return true;
+            alert("Password errata!");
+            return false;
+        };
+
+        document.getElementById('btn-del-local').onclick = async () => {
+            if (checkPassword()) await clearIndexedDbPersistence(db) || location.reload();
+        };
+
+        document.getElementById('btn-del-cloud').onclick = async () => {
+            if (checkPassword() && confirm("Svuotare CLOUD?")) {
+                const b = writeBatch(db);
+                const docs = await getDocs(collection(db, `users/${uid}/cnc_parts`));
+                docs.forEach(d => b.delete(d.ref));
+                await b.commit();
+                alert("Cloud svuotato.");
+            }
+        };
+
+        document.getElementById('btn-del-total').onclick = async () => {
+            if (checkPassword() && prompt("Scrivi ELIMINA:") === "ELIMINA") {
+                const b = writeBatch(db);
+                const docs = await getDocs(collection(db, `users/${uid}/cnc_parts`));
+                docs.forEach(d => b.delete(d.ref));
+                await b.commit();
+                await clearIndexedDbPersistence(db);
+                location.reload();
+            }
+        };
 
         window.editItem = id => {
             const i = dataList.find(x => x.id === id);
@@ -310,15 +443,21 @@
             document.getElementById('part-qty').value = i.qty || 1; 
             document.getElementById('setup-t').value = i.setup || 0; 
             document.getElementById('prod-t').value = i.prod || 0; 
+            document.getElementById('hourly-rate').value = i.rate || 60;
             document.getElementById('edit-id').value = i.id; 
             calc(); window.scrollTo({top: 0, behavior: 'smooth'});
         };
+
         window.delItem = id => confirm("Eliminare riga?") && deleteDoc(doc(db, `users/${uid}/cnc_parts`, id));
+
         document.getElementById('cancel-btn').onclick = clearForm;
+
         function clearForm() { 
             document.querySelectorAll('input:not([type=email]):not([type=password]):not(#hourly-rate)').forEach(i => i.value = ""); 
             document.getElementById('part-qty').value = "1"; document.getElementById('edit-id').value = ""; calc(); 
+            dupBox.classList.add('hidden');
         }
+
         document.getElementById('search').oninput = render;
     </script>
 </body>
