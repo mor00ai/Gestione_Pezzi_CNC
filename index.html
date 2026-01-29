@@ -59,8 +59,7 @@
         <button id="login-btn" class="btn-primary mb-3">Accedi</button>
         
         <div id="reg-wrapper" class="hidden border-t pt-4 mt-2">
-            <p class="text-[10px] text-center text-amber-600 font-bold mb-2 uppercase">Modalità Registrazione Attiva</p>
-            <button id="reg-btn" class="w-full py-2 bg-slate-100 text-slate-500 rounded-lg text-sm font-bold border border-dashed border-slate-300">Crea Nuovo Account</button>
+             <button id="reg-btn" class="w-full text-sm text-gray-400">Registrati</button>
         </div>
     </div>
 
@@ -175,31 +174,36 @@
     <footer>Copyright Moralex00 v.1</footer>
 
     <script>
-        const ADMIN_PASS = "MORALEX"; // Password universale per sbloccare le funzioni critiche
+        const ADMIN_PASS = "MORALEX";
 
-        // --- GESTIONE SBLOCCO DISPOSITIVO ---
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js')
+            .then(() => console.log('Service Worker Registrato!'))
+            .catch(err => console.error('Errore SW:', err));
+        }
+
+        // Controllo sblocco dispositivo
         const lockScreen = document.getElementById('admin-lock-screen');
-        const authScreen = document.getElementById('auth-section');
-        
+        const authSection = document.getElementById('auth-section');
+
         if(localStorage.getItem('cnc_unlocked') === 'true') {
             lockScreen.classList.add('hidden');
-            authScreen.classList.remove('hidden');
+            authSection.classList.remove('hidden');
         }
 
         document.getElementById('btn-admin-unlock').onclick = () => {
             if(document.getElementById('admin-unlock-pass').value === ADMIN_PASS) {
                 localStorage.setItem('cnc_unlocked', 'true');
                 lockScreen.classList.add('hidden');
-                authScreen.classList.remove('hidden');
-            } else { alert("Accesso Negato"); }
+                authSection.classList.remove('hidden');
+            } else { alert("Password Errata"); }
         };
 
-        // --- SBLOCCO TASTO REGISTRAZIONE ---
+        // Sblocco tasto registrazione cliccando sul titolo
         document.getElementById('auth-title').onclick = () => {
-            const p = prompt("Password Amministratore per abilitare registrazione:");
+            const p = prompt("Password Amministratore per registrare:");
             if(p === ADMIN_PASS) {
                 document.getElementById('reg-wrapper').classList.remove('hidden');
-                alert("Modalità registrazione attivata per questa sessione.");
             }
         };
     </script>
@@ -227,6 +231,7 @@
         let uid, dataList = [], filteredList = [], unsubscribe = () => {};
 
         onAuthStateChanged(auth, user => {
+            // L'app si mostra solo se il dispositivo è sbloccato
             if (user && localStorage.getItem('cnc_unlocked') === 'true') {
                 uid = user.uid; document.getElementById('user-display').innerText = user.email;
                 document.getElementById('auth-section').classList.add('hidden');
@@ -234,24 +239,20 @@
                 loadData();
             } else {
                 document.getElementById('app-section').classList.add('hidden');
-                if(localStorage.getItem('cnc_unlocked') === 'true') authScreen.classList.remove('hidden');
+                if(localStorage.getItem('cnc_unlocked') === 'true') {
+                    document.getElementById('auth-section').classList.remove('hidden');
+                }
             }
         });
 
-        document.getElementById('login-btn').onclick = () => signInWithEmailAndPassword(auth, email.value, password.value).catch(e => alert("Errore: " + e.message));
-        
+        document.getElementById('login-btn').onclick = () => signInWithEmailAndPassword(auth, email.value, password.value);
         document.getElementById('reg-btn').onclick = () => {
-            createUserWithEmailAndPassword(auth, email.value, password.value)
-            .then(() => {
-                document.getElementById('reg-wrapper').classList.add('hidden'); // Nasconde subito dopo l'uso
-                alert("Account creato con successo!");
-            })
-            .catch(e => alert("Errore: " + e.message));
+            createUserWithEmailAndPassword(auth, email.value, password.value).then(() => {
+                document.getElementById('reg-wrapper').classList.add('hidden'); // Nascondi dopo registrazione
+            });
         };
-
         document.getElementById('logout-btn').onclick = () => signOut(auth);
 
-        // ... Resto delle funzioni (loadData, calc, render, export, ecc.) restano identiche a prima ...
         function loadData() {
             unsubscribe();
             unsubscribe = onSnapshot(collection(db, `users/${uid}/cnc_parts`), snap => {
@@ -276,6 +277,7 @@
 
         ['part-qty', 'setup-t', 'prod-t', 'hourly-rate'].forEach(id => document.getElementById(id).oninput = calc);
 
+        // --- GESTIONE DUPLICATI / STORICO ---
         const codeIn = document.getElementById('part-code');
         const dupBox = document.getElementById('duplicate-info');
         const dupDet = document.getElementById('dup-details');
@@ -285,11 +287,21 @@
             const val = codeIn.value.toUpperCase().trim();
             const editId = document.getElementById('edit-id').value;
             if (val.length < 2) return dupBox.classList.add('hidden');
+
             oldPart = dataList.find(i => i.code === val && i.id !== editId);
+
             if (oldPart) {
                 dupBox.classList.remove('hidden');
-                dupDet.innerHTML = `<b>CMD:</b> ${oldPart.order || '-'}<br><b>Mat:</b> ${oldPart.material || '-'}<br><b>Setup:</b> ${oldPart.setup}m | <b>Ciclo:</b> ${oldPart.prod}m`;
-            } else { dupBox.classList.add('hidden'); }
+                dupDet.innerHTML = `
+                    <b>CMD:</b> ${oldPart.order || '-'}<br>
+                    <b>Materiale:</b> ${oldPart.material || '-'}<br>
+                    <b>Setup:</b> ${oldPart.setup}m | <b>Ciclo:</b> ${oldPart.prod}m<br>
+                    <b class="text-emerald-700">Tariffa: €${oldPart.rate || 0}/h</b><br>
+                    <b>Macchina:</b> ${oldPart.machine || '-'}
+                `;
+            } else {
+                dupBox.classList.add('hidden');
+            }
         };
 
         document.getElementById('btn-copy-old').onclick = (e) => {
@@ -300,8 +312,51 @@
                 document.getElementById('part-mat').value = oldPart.material || '';
                 document.getElementById('machine-name').value = oldPart.machine || '';
                 document.getElementById('hourly-rate').value = oldPart.rate || 60;
-                calc(); dupBox.classList.add('hidden');
+                calc();
+                dupBox.classList.add('hidden');
             }
+        };
+
+        document.addEventListener('click', (e) => {
+            if (!codeIn.contains(e.target) && !dupBox.contains(e.target)) dupBox.classList.add('hidden');
+        });
+
+        // --- BACKUP E IMPORT ---
+        document.getElementById('btn-backup-json').onclick = () => {
+            if (!dataList.length) return alert("Nessun dato da salvare.");
+            const dataStr = JSON.stringify(dataList, null, 2);
+            const blob = new Blob([dataStr], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Backup_CNC_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+        };
+
+        document.getElementById('btn-import-trigger').onclick = () => document.getElementById('import-input').click();
+
+        document.getElementById('import-input').onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const importedData = JSON.parse(event.target.result);
+                    if (!Array.isArray(importedData)) throw new Error("Formato non valido");
+                    if (confirm(`Stai per importare ${importedData.length} elementi. Continuare?`)) {
+                        const b = writeBatch(db);
+                        importedData.forEach(item => {
+                            const { id, ...cleanItem } = item;
+                            const newDoc = doc(collection(db, `users/${uid}/cnc_parts`));
+                            b.set(newDoc, cleanItem);
+                        });
+                        await b.commit();
+                        alert("Importazione completata con successo!");
+                    }
+                } catch (err) { alert("Errore durante l'importazione."); }
+                e.target.value = ""; 
+            };
+            reader.readAsText(file);
         };
 
         document.getElementById('save-btn').onclick = async () => {
@@ -325,7 +380,13 @@
             const list = document.getElementById('list');
             const search = document.getElementById('search').value.toLowerCase();
             list.innerHTML = "";
-            filteredList = dataList.filter(i => i.code.toLowerCase().includes(search) || (i.machine && i.machine.toLowerCase().includes(search)));
+            filteredList = dataList.filter(i => 
+                i.code.toLowerCase().includes(search) || 
+                (i.machine && i.machine.toLowerCase().includes(search)) || 
+                (i.order && i.order.toLowerCase().includes(search)) || 
+                (i.material && i.material.toLowerCase().includes(search))
+            );
+            
             document.getElementById('search-summary-box').style.display = search ? 'flex' : 'none';
             const tT = filteredList.reduce((a, b) => a + (b.total || 0), 0);
             const tC = filteredList.reduce((a, b) => a + (b.cost || 0), 0);
@@ -340,46 +401,110 @@
                         <div class="flex items-center mb-1 flex-wrap gap-1">
                             <span class="badge order-badge">${i.order || 'NO CMD'}</span>
                             <span class="badge machine-badge">${i.machine || 'MACC.'}</span>
+                            <span class="badge qty-badge">x${i.qty || 1}</span>
+                            ${i.material ? `<span class="badge mat-badge">${i.material}</span>` : ''}
                             <p class="font-black text-indigo-900 text-sm uppercase ml-1">${i.code}</p>
                         </div>
-                        <div class="text-[9px] font-bold text-slate-500 ml-1">Tot: ${i.total.toFixed(1)}m | €${i.cost.toFixed(2)}</div>
+                        <p class="text-[10px] text-gray-400 font-medium ml-1">${i.name || '-'}</p>
+                        <div class="text-[9px] font-bold text-slate-500 mt-1 ml-1">Setup: ${i.setup}m | Ciclo: ${i.prod}m | Tot: ${i.total.toFixed(1)}m | €${i.rate}/h</div>
                     </div>
-                    <div class="flex bg-slate-50 rounded-lg border">
-                        <button onclick="editItem('${i.id}')" class="text-indigo-400 text-[10px] font-bold p-2 border-r">MOD</button>
-                        <button onclick="delItem('${i.id}')" class="text-red-300 text-[10px] font-bold p-2">X</button>
+                    <div class="flex items-center gap-2">
+                        <div class="text-right mr-2"><div class="text-[8px] text-emerald-600 font-bold uppercase">Lotto</div><div class="text-sm font-black text-emerald-600">€${i.cost.toFixed(2)}</div></div>
+                        <div class="flex bg-slate-50 rounded-lg border">
+                            <button onclick="exportSingle('${i.id}')" class="text-emerald-500 text-[10px] font-bold p-2 border-r">EXP</button>
+                            <button onclick="editItem('${i.id}')" class="text-indigo-400 text-[10px] font-bold p-2 border-r">MOD</button>
+                            <button onclick="delItem('${i.id}')" class="text-red-300 text-[10px] font-bold p-2">X</button>
+                        </div>
                     </div>`;
                 list.appendChild(div);
             });
         }
 
+        window.performExport = (list, format, fileName) => {
+            if(!list.length) return alert("Nessun dato!");
+            const now = new Date().toLocaleString();
+            if (format === 'pdf') {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('l', 'mm', 'a4');
+                doc.text("REPORT PRODUZIONE CNC - " + now, 14, 15);
+                const rows = list.map(i => [new Date(i.timestamp).toLocaleDateString(), i.order, i.machine, i.code, i.material, i.qty, i.total.toFixed(1), "€ "+i.cost.toFixed(2)]);
+                doc.autoTable({ startY: 25, head: [['DATA', 'CMD', 'MACCHINA', 'DISEGNO', 'MAT.', 'QTA', 'MIN', 'COSTO']], body: rows, theme: 'grid', styles: {fontSize: 8}});
+                doc.save(`${fileName}.pdf`);
+            } else if (format === 'csv') {
+                let c = "DATA;CMD;MACCHINA;DISEGNO;MATERIALE;QTA;MIN_TOT;EURO\n";
+                list.forEach(i => c += `${new Date(i.timestamp).toLocaleDateString()};${i.order};${i.machine};${i.code};${i.material};${i.qty};${i.total};${i.cost}\n`);
+                downloadFile(c, `${fileName}.csv`, "text/csv");
+            } else {
+                let t = `REPORT CNC ${now}\n` + "=".repeat(40) + "\n";
+                list.forEach(i => t += `${i.order} | ${i.machine} | ${i.code} | € ${i.cost}\n`);
+                downloadFile(t, `${fileName}.txt`, "text/plain");
+            }
+        };
+
+        window.exportSingle = (id) => performExport([dataList.find(x => x.id === id)], 'pdf', "Scheda_CNC");
+        document.getElementById('run-export').onclick = () => performExport(filteredList, document.getElementById('export-format').value, "Lista_CNC");
+        document.getElementById('pdf-report-shortcut').onclick = () => performExport(filteredList, 'pdf', "Report_Rapido");
+
+        function downloadFile(c, n, t) { const b = new Blob([c], {type: t}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = n; a.click(); }
+
+        const checkPassword = () => {
+            const pass = prompt("Password di sicurezza:");
+            if (pass === "1234") return true;
+            alert("Password errata!");
+            return false;
+        };
+
+        document.getElementById('btn-del-local').onclick = async () => {
+            if (checkPassword()) await clearIndexedDbPersistence(db) || location.reload();
+        };
+
+        document.getElementById('btn-del-cloud').onclick = async () => {
+            if (checkPassword() && confirm("Svuotare CLOUD?")) {
+                const b = writeBatch(db);
+                const docs = await getDocs(collection(db, `users/${uid}/cnc_parts`));
+                docs.forEach(d => b.delete(d.ref));
+                await b.commit();
+                alert("Cloud svuotato.");
+            }
+        };
+
+        document.getElementById('btn-del-total').onclick = async () => {
+            if (checkPassword() && prompt("Scrivi ELIMINA:") === "ELIMINA") {
+                const b = writeBatch(db);
+                const docs = await getDocs(collection(db, `users/${uid}/cnc_parts`));
+                docs.forEach(d => b.delete(d.ref));
+                await b.commit();
+                await clearIndexedDbPersistence(db);
+                location.reload();
+            }
+        };
+
         window.editItem = id => {
             const i = dataList.find(x => x.id === id);
             document.getElementById('part-code').value = i.code; 
+            document.getElementById('part-name').value = i.name || '';
             document.getElementById('order-no').value = i.order || ''; 
             document.getElementById('machine-name').value = i.machine || '';
+            document.getElementById('part-mat').value = i.material || '';
             document.getElementById('part-qty').value = i.qty || 1; 
             document.getElementById('setup-t').value = i.setup || 0; 
             document.getElementById('prod-t').value = i.prod || 0; 
+            document.getElementById('hourly-rate').value = i.rate || 60;
             document.getElementById('edit-id').value = i.id; 
             calc(); window.scrollTo({top: 0, behavior: 'smooth'});
         };
 
-        window.delItem = id => confirm("Eliminare?") && deleteDoc(doc(db, `users/${uid}/cnc_parts`, id));
+        window.delItem = id => confirm("Eliminare riga?") && deleteDoc(doc(db, `users/${uid}/cnc_parts`, id));
+
         document.getElementById('cancel-btn').onclick = clearForm;
+
         function clearForm() { 
             document.querySelectorAll('input:not([type=email]):not([type=password]):not(#hourly-rate):not(#admin-unlock-pass)').forEach(i => i.value = ""); 
             document.getElementById('part-qty').value = "1"; document.getElementById('edit-id').value = ""; calc(); 
+            dupBox.classList.add('hidden');
         }
-        document.getElementById('search').oninput = render;
 
-        // Backup e Export (Semplificati per brevità, ma presenti nel file originale)
-        document.getElementById('btn-backup-json').onclick = () => {
-            const dataStr = JSON.stringify(dataList);
-            const blob = new Blob([dataStr], {type: "application/json"});
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = "backup.json"; a.click();
-        };
+        document.getElementById('search').oninput = render;
     </script>
 </body>
 </html>
