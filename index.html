@@ -56,7 +56,8 @@
         <h2 id="auth-title" class="text-2xl font-bold text-center mb-6 text-indigo-900 cursor-pointer">Database Officina</h2>
         <input type="email" id="email" placeholder="Email">
         <input type="password" id="password" placeholder="Password">
-        <button id="login-btn" class="btn-primary mb-3">Accedi</button>
+        <button id="login-btn" class="btn-primary mb-2">Accedi</button>
+        <button id="forgot-pass-btn" class="text-[10px] text-indigo-500 font-bold block mx-auto uppercase hover:underline mb-2">Password dimenticata?</button>
         <div id="reg-wrapper" class="hidden border-t pt-4 mt-2">
              <button id="reg-btn" class="w-full text-sm text-gray-400">Registrati</button>
         </div>
@@ -171,7 +172,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, setDoc, doc, deleteDoc, onSnapshot, getDocs, writeBatch, clearIndexedDbPersistence, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -190,11 +191,8 @@
 
         let uid, dataList = [], filteredList = [], unsubscribe = () => {};
 
-        // --- FIX SICUREZZA REGISTRAZIONE ---
         onAuthStateChanged(auth, user => {
-            // Nascondiamo sempre la registrazione quando cambia lo stato
             document.getElementById('reg-wrapper').classList.add('hidden');
-
             if (user && localStorage.getItem('cnc_unlocked') === 'true') {
                 uid = user.uid; loadData();
                 document.getElementById('user-display').innerText = user.email;
@@ -233,7 +231,6 @@
 
         ['part-qty', 'setup-t', 'prod-t', 'hourly-rate'].forEach(id => document.getElementById(id).oninput = calc);
 
-        // RICERCA E DUPLICATI
         const codeIn = document.getElementById('part-code');
         const dupBox = document.getElementById('duplicate-info');
         const dupDet = document.getElementById('dup-details');
@@ -310,6 +307,8 @@
                         <div class="text-[10px] text-slate-500 ml-1 font-medium">
                             Setup: ${i.setup}m | Ciclo: ${i.prod}m | €${i.rate}/h
                         </div>
+                        ${i.name ? `<div class="text-[10px] italic text-slate-600 ml-1 mt-0.5 border-l-2 border-indigo-200 pl-2">Note: ${i.name}</div>` : ''}
+                        
                         <div class="text-[10px] font-black text-indigo-600 ml-1 mt-0.5">
                             Pezzo: €${(i.unit || i.cost/i.qty).toFixed(2)} | Lotto: €${i.cost.toFixed(2)} | Tot: ${i.total.toFixed(1)}m
                         </div>
@@ -368,6 +367,14 @@
             const link = document.createElement('a'); link.href = URL.createObjectURL(blob); 
             link.download = name; link.click(); 
         }
+
+        document.getElementById('forgot-pass-btn').onclick = () => {
+            const emailAddr = document.getElementById('email').value.trim();
+            if(!emailAddr) return alert("Inserisci l'email nel campo sopra per ricevere il link di ripristino.");
+            sendPasswordResetEmail(auth, emailAddr)
+                .then(() => alert("Email di ripristino inviata!"))
+                .catch(e => alert("Errore: " + e.message));
+        };
 
         document.getElementById('login-btn').onclick = () => signInWithEmailAndPassword(auth, email.value, password.value).catch(() => alert("Credenziali errate"));
         document.getElementById('logout-btn').onclick = () => signOut(auth);
@@ -444,7 +451,6 @@
             } else { alert("Password Errata"); }
         };
 
-        // Mostra registrazione solo con password amministratore
         document.getElementById('auth-title').onclick = () => {
             const p = prompt("Password Amministratore per registrare:");
             if(p === ADMIN_PASS) {
